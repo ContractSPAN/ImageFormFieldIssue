@@ -12,10 +12,10 @@ public class App
 {
     public static void main( String[] args ) throws Exception {
         String inputFilePath = "input.pdf";
-        String pdfWithSignatureFormFields = "pdfWithSignatureFormFields.pdf";
-        String pdfWithSignatureAndImageFormFields = "pdfWithSignatureAndImageFormFields.pdf";
-        String signedPdfWithImageFormField = "signedPdfWithImageFormField.pdf";
-        String signedAndImageFilledPdf = "signedAndImageFilledPdf.pdf";
+        String pdfWithSignatureFormFields = "output/pdfWithSignatureFormFields.pdf";
+        String pdfWithSignatureAndImageFormFields = "output/pdfWithSignatureAndImageFormFields.pdf";
+        String signedPdfWithImageFormField = "output/signedPdfWithImageFormField.pdf";
+        String signedAndImageFilledPdf = "output/signedAndImageFilledPdf.pdf";
 
         // Create signatory details
         List<SignatureDetails> signatureDetailsList = getSignatureDetailsList(inputFilePath);
