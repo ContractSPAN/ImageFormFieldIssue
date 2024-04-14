@@ -30,13 +30,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDFormContentStream;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
@@ -51,6 +54,7 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
+import org.apache.pdfbox.pdmodel.interactive.form.PDNonTerminalField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDPushButton;
 import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
 
@@ -332,9 +336,36 @@ public class PdfService {
         }
         initial.setReadOnly(true);
 
+        // Mark (setNeedToBeUpdated(true)) all changed objects including a sequence of objects leading to them respectively from the trailer
+        initial.getCOSObject().setNeedToBeUpdated(true);
+        initial.getWidgets().get(0).getAppearance().getCOSObject().setNeedToBeUpdated(true);
+        document.getDocumentCatalog().getCOSObject().setNeedToBeUpdated(true);
+        document.getDocumentCatalog().getAcroForm().getCOSObject().setNeedToBeUpdated(true);
+        document.getPage(0).getCOSObject().setNeedToBeUpdated(true);
+        pdAppearanceStream.getCOSObject().setNeedToBeUpdated(true);
+        pdAppearanceStream.getResources().getCOSObject().setNeedToBeUpdated(true);
+        
+        COSDictionary fieldDictionary = initial.getCOSObject();
+        COSDictionary dictionary = (COSDictionary) fieldDictionary.getDictionaryObject(COSName.AP);
+        dictionary.setNeedToBeUpdated(true);
+        COSStream stream = (COSStream) dictionary.getDictionaryObject(COSName.N);
+        stream.setNeedToBeUpdated(true);
+        while (fieldDictionary != null)
+        {
+            fieldDictionary.setNeedToBeUpdated(true);
+            fieldDictionary = (COSDictionary) fieldDictionary.getDictionaryObject(COSName.PARENT);
+        }
+
+        COSDictionary docDictionary = document.getDocumentCatalog().getCOSObject();
+        docDictionary.setNeedToBeUpdated(true);
+        docDictionary = (COSDictionary) docDictionary.getDictionaryObject(COSName.ACRO_FORM);
+        docDictionary.setNeedToBeUpdated(true);
+        COSArray array = (COSArray) docDictionary.getDictionaryObject(COSName.FIELDS);
+        array.setNeedToBeUpdated(true);
+
         // Save and close the document
         FileOutputStream fos = new FileOutputStream(outputFilePath);
-        document.save(fos);
+        document.saveIncremental(fos);
         document.close();
     }
 }
