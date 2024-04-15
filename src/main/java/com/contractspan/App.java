@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
 
@@ -34,7 +35,7 @@ public class App
     }
 
     public static List<SignatureDetails> getSignatureDetailsList(String inputFilePath) throws IOException {
-        PDDocument document = PDDocument.load(new File(inputFilePath));
+        PDDocument document = Loader.loadPDF(new File(inputFilePath));
         List<SignatureDetails> signatureDetailsList = new ArrayList<SignatureDetails>();
 
         // Create signature details

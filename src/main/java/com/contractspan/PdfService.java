@@ -1,48 +1,28 @@
 package com.contractspan;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-
-import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDFormContentStream;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
@@ -54,7 +34,6 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
-import org.apache.pdfbox.pdmodel.interactive.form.PDNonTerminalField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDPushButton;
 import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
 
@@ -64,7 +43,7 @@ public class PdfService {
 
     public static void addSignatureFields(String documentFilePath, String intermediateFilePath, List<SignatureDetails> signatureDetailsList) throws Exception {
         // Open document
-        PDDocument document = PDDocument.load(new File(documentFilePath));
+        PDDocument document = Loader.loadPDF(new File(documentFilePath));
         
         // Get the acroForm
         PDAcroForm acroForm = document.getDocumentCatalog().getAcroForm();
@@ -129,7 +108,8 @@ public class PdfService {
         cs.fillAndStroke();
 
         // Draw some text inside the rectangle
-        cs.setFont(PDType1Font.HELVETICA, 12);
+        PDFont font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+        cs.setFont(font, 12);
         cs.setNonStrokingColor(0f, 0f, 0f);
         PDExtendedGraphicsState graphicsState1 = new PDExtendedGraphicsState();
         graphicsState1.setNonStrokingAlphaConstant(1f);
@@ -198,7 +178,7 @@ public class PdfService {
 
     public static void sign(String inputFilePathString, String outputFilePathString, SignatureDetails signatureDetails) throws IOException, URISyntaxException, GeneralSecurityException, InvalidKeySpecException {
         // Load input file
-        PDDocument inputDocument = PDDocument.load(new File(inputFilePathString));
+        PDDocument inputDocument = Loader.loadPDF(new File(inputFilePathString));
 
         // Find and link the relevant signature field
         List<PDSignature> signatures = PdfService.findSignatures(inputDocument, signatureDetails.getSignatureID());
@@ -221,28 +201,26 @@ public class PdfService {
         SignatureInterface signatureInterface = new SignatureService();
         inputDocument.addSignature(signature, signatureInterface, signatureOptions);
 
-        COSDictionary dictionary = inputDocument.getDocumentCatalog().getCOSObject();
-        dictionary.setNeedToBeUpdated(true);
-
         FileOutputStream fos = new FileOutputStream(outputFilePathString);
         inputDocument.saveIncremental(fos);
 
         // Close the document
         inputDocument.close();
+        fos.close();
 
     }
 
     @SneakyThrows
     public static void addInitialFields(String inputFilePath, String outputFilePath) {
         // Open document
-        PDDocument document = PDDocument.load(new File(inputFilePath));
+        PDDocument document = Loader.loadPDF(new File(inputFilePath));
         
         // Get the acroForm
         PDAcroForm acroForm = document.getDocumentCatalog().getAcroForm();
         if (acroForm == null) {
             acroForm = new PDAcroForm(document);
+            document.getDocumentCatalog().setAcroForm(acroForm);
         }
-        document.getDocumentCatalog().setAcroForm(acroForm);
         
         // Create a new signature field
         PDPushButton pdPushButtonField = new PDPushButton(acroForm);
@@ -255,7 +233,7 @@ public class PdfService {
         PDAnnotationWidget widget = pdPushButtonField.getWidgets().get(0);
 
         // Set the rectangle position and size of the widget
-        PDRectangle rect = new PDRectangle(200, 300, 100, 50);
+        PDRectangle rect = new PDRectangle(200, 300, 130, 60);
         widget.setRectangle(rect);
 
         // Set the page of the widget
@@ -307,7 +285,7 @@ public class PdfService {
     @SneakyThrows
     public static void fillInitialField(String inputFilePath, String outputFilePath) {
         // Load input file
-        PDDocument document = PDDocument.load(new File(inputFilePath));
+        PDDocument document = Loader.loadPDF(new File(inputFilePath));
 
         // Find and link the relevant signature field
         PDPushButton initial = PdfService.findInitial(document, "132323423180965");
@@ -319,53 +297,31 @@ public class PdfService {
         PDAppearanceStream pdAppearanceStream = new PDAppearanceStream(document);
         pdAppearanceStream.setResources(new PDResources());
         try (PDPageContentStream pdPageContentStream = new PDPageContentStream(document, pdAppearanceStream)) {
-            pdPageContentStream.drawImage(pdImageXObject, 200, 300, width, height);
+            pdPageContentStream.drawImage(pdImageXObject, 0, 0, width, height);
         }
         pdAppearanceStream.setBBox(new PDRectangle(width, height));
 
-        List<PDAnnotationWidget> widgets = initial.getWidgets();
-        for (PDAnnotationWidget pdAnnotationWidget : widgets) {
-
-            PDAppearanceDictionary pdAppearanceDictionary = pdAnnotationWidget.getAppearance();
-            if (pdAppearanceDictionary == null) {
-                pdAppearanceDictionary = new PDAppearanceDictionary();
-                pdAnnotationWidget.setAppearance(pdAppearanceDictionary);
-            }
-
-            pdAppearanceDictionary.setNormalAppearance(pdAppearanceStream);
+        PDAnnotationWidget pdAnnotationWidget = initial.getWidgets().get(0);
+        PDAppearanceDictionary pdAppearanceDictionary = pdAnnotationWidget.getAppearance();
+        if (pdAppearanceDictionary == null) {
+            pdAppearanceDictionary = new PDAppearanceDictionary();
+            pdAnnotationWidget.setAppearance(pdAppearanceDictionary);
         }
+
+        pdAppearanceDictionary.setNormalAppearance(pdAppearanceStream);
         initial.setReadOnly(true);
 
-        // Mark (setNeedToBeUpdated(true)) all changed objects including a sequence of objects leading to them respectively from the trailer
+        // Mark need to update
         initial.getCOSObject().setNeedToBeUpdated(true);
+        initial.getWidgets().get(0).getCOSObject().setNeedToBeUpdated(true);
         initial.getWidgets().get(0).getAppearance().getCOSObject().setNeedToBeUpdated(true);
-        document.getDocumentCatalog().getCOSObject().setNeedToBeUpdated(true);
-        document.getDocumentCatalog().getAcroForm().getCOSObject().setNeedToBeUpdated(true);
-        document.getPage(0).getCOSObject().setNeedToBeUpdated(true);
         pdAppearanceStream.getCOSObject().setNeedToBeUpdated(true);
         pdAppearanceStream.getResources().getCOSObject().setNeedToBeUpdated(true);
-        
-        COSDictionary fieldDictionary = initial.getCOSObject();
-        COSDictionary dictionary = (COSDictionary) fieldDictionary.getDictionaryObject(COSName.AP);
-        dictionary.setNeedToBeUpdated(true);
-        COSStream stream = (COSStream) dictionary.getDictionaryObject(COSName.N);
-        stream.setNeedToBeUpdated(true);
-        while (fieldDictionary != null)
-        {
-            fieldDictionary.setNeedToBeUpdated(true);
-            fieldDictionary = (COSDictionary) fieldDictionary.getDictionaryObject(COSName.PARENT);
-        }
-
-        COSDictionary docDictionary = document.getDocumentCatalog().getCOSObject();
-        docDictionary.setNeedToBeUpdated(true);
-        docDictionary = (COSDictionary) docDictionary.getDictionaryObject(COSName.ACRO_FORM);
-        docDictionary.setNeedToBeUpdated(true);
-        COSArray array = (COSArray) docDictionary.getDictionaryObject(COSName.FIELDS);
-        array.setNeedToBeUpdated(true);
 
         // Save and close the document
         FileOutputStream fos = new FileOutputStream(outputFilePath);
         document.saveIncremental(fos);
         document.close();
+        fos.close();
     }
 }
