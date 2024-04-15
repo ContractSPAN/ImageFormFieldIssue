@@ -339,12 +339,18 @@ public class PdfService {
         // Mark (setNeedToBeUpdated(true)) all changed objects including a sequence of objects leading to them respectively from the trailer
         initial.getCOSObject().setNeedToBeUpdated(true);
         initial.getWidgets().get(0).getAppearance().getCOSObject().setNeedToBeUpdated(true);
-        document.getDocumentCatalog().getCOSObject().setNeedToBeUpdated(true);
-        document.getDocumentCatalog().getAcroForm().getCOSObject().setNeedToBeUpdated(true);
-        document.getPage(0).getCOSObject().setNeedToBeUpdated(true);
         pdAppearanceStream.getCOSObject().setNeedToBeUpdated(true);
         pdAppearanceStream.getResources().getCOSObject().setNeedToBeUpdated(true);
         
+        document.getPage(0).getCOSObject().setNeedToBeUpdated(true);
+        COSDictionary docDictionary = document.getDocumentCatalog().getCOSObject();
+        docDictionary.setNeedToBeUpdated(true);
+        docDictionary = (COSDictionary) docDictionary.getDictionaryObject(COSName.ACRO_FORM);
+        docDictionary.setNeedToBeUpdated(true);
+        COSArray array = (COSArray) docDictionary.getDictionaryObject(COSName.FIELDS);
+        document.getDocumentCatalog().getCOSObject().getDictionaryObject(COSName.FIELDS);
+        array.setNeedToBeUpdated(true);
+
         COSDictionary fieldDictionary = initial.getCOSObject();
         COSDictionary dictionary = (COSDictionary) fieldDictionary.getDictionaryObject(COSName.AP);
         dictionary.setNeedToBeUpdated(true);
@@ -355,13 +361,6 @@ public class PdfService {
             fieldDictionary.setNeedToBeUpdated(true);
             fieldDictionary = (COSDictionary) fieldDictionary.getDictionaryObject(COSName.PARENT);
         }
-
-        COSDictionary docDictionary = document.getDocumentCatalog().getCOSObject();
-        docDictionary.setNeedToBeUpdated(true);
-        docDictionary = (COSDictionary) docDictionary.getDictionaryObject(COSName.ACRO_FORM);
-        docDictionary.setNeedToBeUpdated(true);
-        COSArray array = (COSArray) docDictionary.getDictionaryObject(COSName.FIELDS);
-        array.setNeedToBeUpdated(true);
 
         // Save and close the document
         FileOutputStream fos = new FileOutputStream(outputFilePath);
